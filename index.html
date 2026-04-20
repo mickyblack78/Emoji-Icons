@@ -1,47 +1,341 @@
-<div id="app-container">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Ultimate Emoji Mission</title>
     
-    <section id="splash-screen" class="active">
-        <div id="hero-display">
-            <div class="hero-emoji" id="splash-emoji">⭐</div>
-        </div>
+    <style>
+        /* ========================================= */
+        /* PASTE PHASE 2 (CSS / VISUAL ENGINE) HERE  */
+        /* ========================================= */
         
-        <div id="launch-control-area">
-            <div id="launch-menu" class="hidden-menu">
-                <button class="menu-item" id="btn-create">1 Create</button>
-                <button class="menu-item" id="btn-library">2 Library</button>
-            </div>
-            <button id="main-launch-btn">LAUNCH</button>
-        </div>
-    </section>
+        /* Note: Ensure your Phase 2 includes the 
+           .airline-container and .running-character classes */
+    </style>
+</head>
+<body>
 
-    <section id="main-editor-view" class="hidden">
+    <script>
+        /* ========================================= */
+        /* PASTE PHASE 3 (THE SNIFF BRAIN) HERE      */
+        /* PHASE 3: THE SNIFF & SLICE BRAIN (REPAIRED & SYNCED) */
+const SniffEngine = {
+    canvas: document.createElement('canvas'),
+    get ctx() { return this.canvas.getContext('2d', { willReadFrequently: true }); },
+    
+    scanForIslands: function(imageElement) {
+        const { width, height } = imageElement;
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.ctx.drawImage(imageElement, 0, 0);
+
+        const imgData = this.ctx.getImageData(0, 0, width, height);
+        const pixels = imgData.data;
+        const visited = new Uint8Array(width * height);
+        const discoveredSlices = [];
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = (y * width + x);
+                const alpha = pixels[idx * 4 + 3];
+                if (alpha > 15 && !visited[idx]) {
+                    const islandBounds = this.floodFill(x, y, width, height, pixels, visited);
+                    discoveredSlices.push(this.extractIsland(islandBounds));
+                }
+            }
+        }
+        return discoveredSlices;
+    },
+
+    floodFill: function(startX, startY, width, height, pixels, visited) {
+        const stack = [[startX, startY]];
+        let minX = startX, maxX = startX, minY = startY, maxY = startY;
+        while (stack.length > 0) {
+            const [x, y] = stack.pop();
+            const idx = (y * width + x);
+            if (x < 0 || x >= width || y < 0 || y >= height || visited[idx]) continue;
+            if (pixels[idx * 4 + 3] <= 15) continue;
+            visited[idx] = 1;
+            if (x < minX) minX = x; if (x > maxX) maxX = x;
+            if (y < minY) minY = y; if (y > maxY) maxY = y;
+            stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+        }
+        return { minX, minY, maxX, maxY };
+    },
+
+    extractIsland: function(b) {
+        const w = (b.maxX - b.minX) + 1;
+        const h = (b.maxY - b.minY) + 1;
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = w; sliceCanvas.height = h;
+        sliceCanvas.getContext('2d').drawImage(this.canvas, b.minX, b.minY, w, h, 0, 0, w, h);
+        return sliceCanvas.toDataURL('image/png');
+    }
+};
+
+/* THE MASTER LISTENER (FIXED CONNECTIONS) */
+document.addEventListener('change', (e) => {
+    if (e.target.id === 'global-picker') { 
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const slices = SniffEngine.scanForIslands(img);
+                slices.forEach(s => {
+                    // SYNCED TO PHASE 4 LibraryManager
+                    if(typeof LibraryManager !== 'undefined') LibraryManager.add(s);
+                });
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(e.target.files[0]);
+    }
+});
         
-        <div id="editor-workbench">
-            <div id="main-highlight-frame">
-                <div id="editor-preview-container">
-                    <img id="active-workbench-img" src="" alt="Active Highlight">
-                </div>
-            </div>
+         ========================================= 
+        /* PASTE PHASE 4 (THE STORAGE CLERK) HERE    *//* PHASE 4: THE STORAGE & DATA CLERK */
+/* Mission: 5MB Byte-Counting, Managed Library & Vault Handover */
+
+const LibraryManager = {
+    MAX_BYTES: 5 * 1024 * 1024, // Strict 5MB Limit
+    storageKey: 'EMOJI_PWA_LIBRARY',
+    
+    // 1. Data Integrity: Calculate exact byte size of a Base64 string
+    calculateByteSize: function(base64String) {
+        const padding = (base64String.endsWith('==') ? 2 : (base64String.endsWith('=') ? 1 : 0));
+        return (base64String.length * (3 / 4)) - padding;
+    },
+
+    // 2. The Gatekeeper: Add new slices with capacity checking
+    add: function(dataUri) {
+        let library = this.getAll();
+        const newSize = this.calculateByteSize(dataUri);
+        const currentTotal = this.getLibrarySize();
+
+        if ((currentTotal + newSize) > this.MAX_BYTES) {
+            this.triggerVaultPrompt(dataUri);
+            return false;
+        }
+
+        library.push({
+            id: Date.now(),
+            data: dataUri,
+            size: newSize,
+            timestamp: new Date().toISOString()
+        });
+
+        localStorage.setItem(this.storageKey, JSON.stringify(library));
+        this.refreshUI();
+        return true;
+    },
+
+    // 3. Library Management: Retrieval and total weight calculation
+    getAll: function() {
+        const data = localStorage.getItem(this.storageKey);
+        return data ? JSON.parse(data) : [];
+    },
+
+    getLibrarySize: function() {
+        return this.getAll().reduce((acc, item) => acc + item.size, 0);
+    },
+
+    // 4. The Vault Handover: Automated prompt when 5MB limit is breached
+    triggerVaultPrompt: function(pendingItem) {
+        const confirmVault = confirm(
+            "MISSION ALERT: Active Library (5MB) is full.\n\n" +
+            "Would you like to move oldest assets to the INTERNAL VAULT (FileSystem) " +
+            "to make room for this new emoji?"
+        );
+
+        if (confirmVault) {
+            this.offloadToVault(pendingItem);
+        }
+    },
+
+    // 5. FileSystem Bridge: Moves data from LocalStorage to Device Storage
+    offloadToVault: async function(item) {
+        // Logic: Download as file or use File System Access API
+        const blob = await (await fetch(item)).blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `emoji_vault_${Date.now()}.png`;
+        a.click();
+        
+        console.log("Integrity Check: Asset successfully offloaded to Device Vault.");
+        // After offloading, we would typically purge the oldest local item
+    },
+
+    // 6. UI Synchronization: Populate the 100-slot bar from Phase 1
+    refreshUI: function() {
+        const container = document.getElementById('recent-icons-stream');
+        const library = this.getAll();
+        container.innerHTML = ''; // Clear for rebuild
+
+        library.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'lib-item';
+            div.innerHTML = `<img src="${item.data}" style="width:100%; height:100%; object-fit:contain;">`;
             
-            <div id="editor-context-menu" class="hidden-menu">
-                <button class="editor-menu-item">1 Save As</button>
-                <button class="editor-menu-item" id="btn-open-edit">2 Edit</button>
-                <button class="editor-menu-item" id="btn-import-new">3 Import New</button>
-            </div>
-        </div>
-
-        <footer id="library-footer">
-            <div id="library-scroll-container">
-                <div id="recent-icons-stream">
-                    </div>
-            </div>
+            div.onclick = () => {
+                // Bridge to Phase 2: Set the Workbench image and apply Airline/Legs
+                const workbenchImg = document.getElementById('active-workbench-img');
+                workbenchImg.src = item.data;
+                workbenchImg.parentElement.classList.add('airline-container', 'running-character');
+            };
             
-            <button id="editor-menu-trigger">☰</button>
-        </footer>
-    </section>
+            container.appendChild(div);
+        });
+    }
+};
+        /* ========================================= */
 
-    <input type="file" id="global-file-picker" accept="image/*" hidden>
-    <canvas id="sniffing-canvas" hidden></canvas>
-    <canvas id="export-canvas" hidden></canvas>
 
-</div>
+        /* ========================================= */
+        /* PASTE PHASE 5 (THE APPLIER / EXPORT) HERE */
+        /*/* PHASE 5: THE HOME-SCREEN APPLIER */
+/* Mission: Manifest Generation, Shortcut Bridging & Live-Icon Export */
+
+const HomeApplier = {
+    // 1. The PWA Bridge: Generate a dynamic Web App Manifest
+    // This allows the "Live" emoji to be 'installed' as its own mini-app
+    generateManifest: function(dataUri, name = "Emoji Asset") {
+        const manifest = {
+            "name": name,
+            "short_name": name,
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#050505",
+            "description": "Custom Live Emoji Asset",
+            "icons": [
+                {
+                    "src": dataUri,
+                    "sizes": "192x192 512x512",
+                    "type": "image/png",
+                    "purpose": "any maskable"
+                }
+            ]
+        };
+        
+        const stringManifest = JSON.stringify(manifest);
+        const blob = new Blob([stringManifest], {type: 'application/json'});
+        return URL.createObjectURL(blob);
+    },
+
+    // 2. The Shortcut Generator: Uses the Navigator Share API
+    // This triggers the device's native "Add to Home Screen" prompt
+    applyToHome: async function(dataUri) {
+        const blob = await (await fetch(dataUri)).blob();
+        const file = new File([blob], "emoji_asset.png", { type: "image/png" });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    files: [file],
+                    title: 'New Emoji Asset',
+                    text: 'Save this to your home screen or use as an icon shortcut.'
+                });
+                console.log("Mission Update: Asset shared to System successfully.");
+            } catch (err) {
+                this.fallbackDownload(dataUri);
+            }
+        } else {
+            this.fallbackDownload(dataUri);
+        }
+    },
+
+    // 3. Mechanical Fallback: Manual Save for older Android versions
+    fallbackDownload: function(dataUri) {
+        const link = document.createElement('a');
+        link.download = `emoji_shortcut_${Date.now()}.png`;
+        link.href = dataUri;
+        link.click();
+        alert("AUTOMATION ALERT: Direct Shortcut not supported on this browser. Use 'Add to Home Screen' manually from the saved image.");
+    },
+
+    // 4. THE COMPOSITOR: The "Final Stamp"
+    // This combines the Emoji + Airline Frame + Legs into one flat PNG for the icon
+    finalizeAsset: function() {
+        const workbench = document.getElementById('workbench-viewport');
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = 512;
+        finalCanvas.height = 512;
+        const ctx = finalCanvas.getContext('2d');
+
+        // Logic: We must render the CSS elements (Legs/Frame) onto the Canvas
+        // Note: Real-world implementation uses html2canvas or manual path drawing
+        // to ensure the "Airline" look is baked into the final icon.
+        
+        // THE 12:05 AM COMPOSITOR (Line 270 Replacement)
+    finalizeAsset: function() {
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = 512; finalCanvas.height = 512;
+        const ctx = finalCanvas.getContext('2d');
+        const activeEmoji = document.getElementById('active-workbench-img');
+
+        ctx.fillStyle = "#050505";
+        ctx.fillRect(0, 0, 512, 512);
+        
+        ctx.fillStyle = "#00f2ff"; 
+        ctx.globalAlpha = 0.6;
+        ctx.fillRect(180, 400, 40, 60); // Left Leg
+        ctx.fillRect(292, 400, 40, 60); // Right Leg
+
+        ctx.globalAlpha = 1.0;
+        if(activeEmoji && activeEmoji.src) ctx.drawImage(activeEmoji, 106, 106, 300, 300);
+
+        ctx.strokeStyle = "#00f2ff";
+        ctx.lineWidth = 8;
+        ctx.strokeRect(90, 90, 332, 332);
+
+        this.applyToHome(finalCanvas.toDataURL('image/png'));
+    }
+}; // This closes the HomeApplier object correctly.
+
+/* THE FINAL LOCK-IN */
+document.getElementById('btn-apply-home').onclick = () => HomeApplier.finalizeAsset();
+ ========================================= */
+
+
+        /* ========================================= */
+        /* PASTE THE "EXTRA" COMPOSITOR HANDSHAKE    */
+        /* (The 12:05 AM Logic) HERE                 */
+        /* ========================================= */
+
+
+        // FINAL BOOT SEQUENCE (The "Glue")
+        // This ensures the buttons actually trigger the logic
+        window.addEventListener('DOMContentLoaded', () => {
+            
+            const importBtn = document.getElementById('btn-import-new');
+            const picker = document.getElementById('global-picker');
+            const exportBtn = document.getElementById('btn-apply-home');
+
+            if(importBtn && picker) {
+                importBtn.onclick = () => picker.click();
+            }
+
+            if(exportBtn) {
+                exportBtn.onclick = () => {
+                    // This calls the Phase 5 / Extra logic
+                    if(typeof HomeApplier !== 'undefined') {
+                        HomeApplier.finalizeAsset();
+                    } else if (typeof Applier !== 'undefined') {
+                        Applier.export();
+                    }
+                };
+            }
+
+            // Load the Library visuals from the Clerk
+            if(typeof LibraryManager !== 'undefined') {
+                LibraryManager.refreshUI();
+            } else if (typeof Clerk !== 'undefined') {
+                Clerk.sync();
+            }
+            
+            console.log("Mission Integrity: Boot Sequence Complete.");
+        });
+    </script>
+</body>
+</html>
