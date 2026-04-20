@@ -1,0 +1,47 @@
+<div id="app-container">
+    
+    <section id="splash-screen" class="active">
+        <div id="hero-display">
+            <div class="hero-emoji" id="splash-emoji">⭐</div>
+        </div>
+        
+        <div id="launch-control-area">
+            <div id="launch-menu" class="hidden-menu">
+                <button class="menu-item" id="btn-create">1 Create</button>
+                <button class="menu-item" id="btn-library">2 Library</button>
+            </div>
+            <button id="main-launch-btn">LAUNCH</button>
+        </div>
+    </section>
+
+    <section id="main-editor-view" class="hidden">
+        
+        <div id="editor-workbench">
+            <div id="main-highlight-frame">
+                <div id="editor-preview-container">
+                    <img id="active-workbench-img" src="" alt="Active Highlight">
+                </div>
+            </div>
+            
+            <div id="editor-context-menu" class="hidden-menu">
+                <button class="editor-menu-item">1 Save As</button>
+                <button class="editor-menu-item" id="btn-open-edit">2 Edit</button>
+                <button class="editor-menu-item" id="btn-import-new">3 Import New</button>
+            </div>
+        </div>
+
+        <footer id="library-footer">
+            <div id="library-scroll-container">
+                <div id="recent-icons-stream">
+                    </div>
+            </div>
+            
+            <button id="editor-menu-trigger">☰</button>
+        </footer>
+    </section>
+
+    <input type="file" id="global-file-picker" accept="image/*" hidden>
+    <canvas id="sniffing-canvas" hidden></canvas>
+    <canvas id="export-canvas" hidden></canvas>
+
+</div>
