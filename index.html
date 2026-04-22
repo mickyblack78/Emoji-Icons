@@ -384,5 +384,68 @@ document.getElementById('btn-apply-home').onclick = () => HomeApplier.finalizeAs
         document.getElementById('btn-import-new').onclick = () => document.getElementById('global-picker').click();
 document.getElementById('btn-apply-home').onclick = () => HomeApplier.finalizeAsset();
     </script>
+                <script>
+// This block connects the Bottom Roll to the Big Canvas
+document.querySelector('.scroll-container').addEventListener('click', function(e) {
+    if (e.target.tagName === 'IMG') {
+        const bigCanvas = document.getElementById('active-canvas');
+        const ctx = bigCanvas.getContext('2d');
+        
+        // This clears the canvas and draws the touched image onto it
+        const tempImg = new Image();
+        tempImg.src = e.target.src;
+        tempImg.onload = function() {
+            ctx.clearRect(0, 0, bigCanvas.width, bigCanvas.height);
+            ctx.drawImage(tempImg, 0, 0, bigCanvas.width, bigCanvas.height);
+        };
+    }
+});
+                </script>
+                <script>
+let activeShape = 'square'; // Default shape
+
+// This block listens to your Menu Box next to the emojis
+document.querySelector('.menu-box').addEventListener('click', function(e) {
+    const action = e.target.innerText.toLowerCase();
+    
+    if (action === 'edit') {
+        // This toggles the shape. For now, we'll cycle between Square and Circle.
+        activeShape = (activeShape === 'square') ? 'circle' : 'square';
+        alert('Shape changed to: ' + activeShape);
+        // Logic to visually redraw the shape on the canvas will go here next
+    }
+    
+    if (action === 'delete') {
+        const confirmDelete = confirm("Are you sure? This clears the canvas.");
+        if (confirmDelete) {
+            const poolDelete = confirm("Do you also want to delete the source image from the pool?");
+            if (poolDelete) {
+                // Logic to remove from the 100-image pool will be inserted here
+                alert("Image removed from pool.");
+            }
+            const canvas = document.getElementById('active-canvas');
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+if (action === 'save') {
+        const bigCanvas = document.getElementById('active-canvas');
+        
+        // Convert the canvas content to a PNG image file
+        bigCanvas.toBlob(function(blob) {
+            const fileName = prompt("Name your icon:", "new_icon");
+            if (fileName) {
+                const link = document.createElement('a');
+                link.download = fileName + '.png';
+                link.href = URL.createObjectURL(blob);
+                
+                // This forces the "Save" to your phone storage
+                link.click();
+                
+                // Cleanup the temporary link
+                URL.revokeObjectURL(link.href);
+            }
+        }, 'image/png');
+}});
+                </script>
 </body>
 </html>
