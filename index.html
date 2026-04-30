@@ -10,9 +10,6 @@
         .airline-container { border: 10px solid white; width: 300px; height: 300px; position: relative; margin: auto; }
 .airline-container::after { content: ''; position: absolute; bottom: -50px; left: 50px; width: 20px; height: 50px; background: black; box-shadow: 160px 0 0 black; }
         /* ========================================= */
-        
-        /* Note: Ensure your Phase 2 includes the 
-           .airline-container and .running-character classes */
     </style>
 </head>
 <body>
@@ -62,9 +59,6 @@
 <button id="btn-apply-home">APPLY TO HOME SCREEN</button>
 
     <script>
-        /* ========================================= */
-        /* PASTE PHASE 3 (THE SNIFF BRAIN) HERE      */
-        /* PHASE 3: THE SNIFF & SLICE BRAIN (REPAIRED & SYNCED) */
 const SniffEngine = {
     canvas: document.createElement('canvas'),
     get ctx() { return this.canvas.getContext('2d', { willReadFrequently: true }); },
@@ -119,7 +113,6 @@ const SniffEngine = {
     }
 };
 
-/* THE MASTER LISTENER (FIXED CONNECTIONS) */
 document.addEventListener('change', (e) => {
     if (e.target.id === 'global-picker') { 
         const reader = new FileReader();
@@ -137,10 +130,6 @@ document.addEventListener('change', (e) => {
         reader.readAsDataURL(e.target.files[0]);
     }
 });
-        
-         ========================================= 
-        /* PASTE PHASE 4 (THE STORAGE CLERK) HERE    *//* PHASE 4: THE STORAGE & DATA CLERK */
-/* Mission: 5MB Byte-Counting, Managed Library & Vault Handover */
 
 const LibraryManager = {
     MAX_BYTES: 5 * 1024 * 1024, // Strict 5MB Limit
