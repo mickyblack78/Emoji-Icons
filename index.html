@@ -223,17 +223,9 @@ const LibraryManager = {
         });
     }
 };
-        /* ========================================= */
 
-
-        /* ========================================= */
-        /* PASTE PHASE 5 (THE APPLIER / EXPORT) HERE */
-        /*/* PHASE 5: THE HOME-SCREEN APPLIER */
-/* Mission: Manifest Generation, Shortcut Bridging & Live-Icon Export */
 
 const HomeApplier = {
-    // 1. The PWA Bridge: Generate a dynamic Web App Manifest
-    // This allows the "Live" emoji to be 'installed' as its own mini-app
     generateManifest: function(dataUri, name = "Emoji Asset") {
         const manifest = {
             "name": name,
