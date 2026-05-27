@@ -2,431 +2,346 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Ultimate Emoji Mission</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base Slots Chassis - Moving Reels</title>
     <style>
-        /* ========================================= */
-        .airline-container { border: 10px solid white; width: 300px; height: 300px; position: relative; margin: auto; }
-.airline-container::after { content: ''; position: absolute; bottom: -50px; left: 50px; width: 20px; height: 50px; background: black; box-shadow: 160px 0 0 black; }
-        /* ========================================= */
+        body {
+            background-color: #222;
+            color: #fff;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .game-container {
+            text-align: center;
+            background-color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        canvas {
+            background-color: #111;
+            border: 2px solid #555;
+            display: block;
+            margin: 0 auto 20px auto;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            align-items: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #ff9900;
+            border: none;
+            border-radius: 5px;
+            color: #000;
+        }
+
+        button:disabled {
+            background-color: #555;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        .info-panel {
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
     </style>
 </head>
 <body>
-    <div id="app-container">
-    
-    <section id="splash-screen" class="active">
-        <div id="hero-display">
-            <div class="hero-emoji" id="splash-emoji">⭐</div>
-        </div>
-        
-        <div id="launch-control-area">
-            <div id="launch-menu" class="hidden-menu">
-                <button class="menu-item" id="btn-create">1 Create</button>
-                <button class="menu-item" id="btn-library">2 Library</button>
-            </div>
-            <button id="main-launch-btn">LAUNCH</button>
-        </div>
-    </section>
 
-    <section id="main-editor-view" class="hidden">
-        
-        <div id="editor-workbench">
-            <div id="main-highlight-frame">
-                <div id="editor-preview-container">
-                    <img id="active-workbench-img" src="" alt="Active Highlight">
-                </div>
-            </div>
-            
-            <div id="editor-context-menu" class="hidden-menu">
-                <button class="editor-menu-item">1 Save As</button>
-                <button class="editor-menu-item" id="btn-open-edit">2 Edit</button>
-                <button class="editor-menu-item" id="btn-import-new">3 Import New</button>
-            </div>
-        </div>
+<div class="game-container">
+    <div class="info-panel">
+        Coins: <span id="balanceDisplay">1000</span> | 
+        Lines: <span id="linesDisplay">20</span> | 
+        Total Bet: <span id="betDisplay">20</span>
+    </div>
 
-        <footer id="library-footer">
-            <div id="library-scroll-container">
-                <div id="recent-icons-stream">
-                </div>
-                
-    <input type="file" id="global-picker" style="display:none;" accept="image/*">
-<button id="btn-import-new">IMPORT EMOJI</button>
-<div id="workbench-viewport" class="airline-container">
-    <img id="active-workbench-img">
+    <!-- Canvas window optimized for 5 reels (100px width each) and 3 visible rows (100px height each) -->
+    <canvas id="slotCanvas" width="500" height="300"></canvas>
+
+    <div class="controls">
+        <button id="spinBtn" onclick="slotMachine.spin()">SPIN!</button>
+        <button onclick="slotMachine.addCredits()">Top-Up</button>
+    </div>
 </div>
-<div id="recent-icons-stream"></div>
-<button id="btn-apply-home">APPLY TO HOME SCREEN</button>
 
-    <script>
-const SniffEngine = {
-    canvas: document.createElement('canvas'),
-    get ctx() { return this.canvas.getContext('2d', { willReadFrequently: true }); },
-    
-    scanForIslands: function(imageElement) {
-        const { width, height } = imageElement;
-        this.canvas.width = width;
-        this.canvas.height = height;
-        this.ctx.drawImage(imageElement, 0, 0);
-
-        const imgData = this.ctx.getImageData(0, 0, width, height);
-        const pixels = imgData.data;
-        const visited = new Uint8Array(width * height);
-        const discoveredSlices = [];
-
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const idx = (y * width + x);
-                const alpha = pixels[idx * 4 + 3];
-                if (alpha > 15 && !visited[idx]) {
-                    const islandBounds = this.floodFill(x, y, width, height, pixels, visited);
-                    discoveredSlices.push(this.extractIsland(islandBounds));
-                }
-            }
-        }
-        return discoveredSlices;
-    },
-
-    floodFill: function(startX, startY, width, height, pixels, visited) {
-        const stack = [[startX, startY]];
-        let minX = startX, maxX = startX, minY = startY, maxY = startY;
-        while (stack.length > 0) {
-            const [x, y] = stack.pop();
-            const idx = (y * width + x);
-            if (x < 0 || x >= width || y < 0 || y >= height || visited[idx]) continue;
-            if (pixels[idx * 4 + 3] <= 15) continue;
-            visited[idx] = 1;
-            if (x < minX) minX = x; if (x > maxX) maxX = x;
-            if (y < minY) minY = y; if (y > maxY) maxY = y;
-            stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
-        }
-        return { minX, minY, maxX, maxY };
-    },
-
-    extractIsland: function(b) {
-        const w = (b.maxX - b.minX) + 1;
-        const h = (b.maxY - b.minY) + 1;
-        const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width = w; sliceCanvas.height = h;
-        sliceCanvas.getContext('2d').drawImage(this.canvas, b.minX, b.minY, w, h, 0, 0, w, h);
-        return sliceCanvas.toDataURL('image/png');
-    }
-};
-
-document.addEventListener('change', (e) => {
-    if (e.target.id === 'global-picker') { 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                const slices = SniffEngine.scanForIslands(img);
-                slices.forEach(s => {
-                    // SYNCED TO PHASE 4 LibraryManager
-                    if(typeof LibraryManager !== 'undefined') LibraryManager.add(s);
-                });
-            };
-            img.src = event.target.result;
-        };
-        reader.readAsDataURL(e.target.files[0]);
-    }
-});
-
-const LibraryManager = {
-    MAX_BYTES: 5 * 1024 * 1024, // Strict 5MB Limit
-    storageKey: 'EMOJI_PWA_LIBRARY',
-    
-    // 1. Data Integrity: Calculate exact byte size of a Base64 string
-    calculateByteSize: function(base64String) {
-        const padding = (base64String.endsWith('==') ? 2 : (base64String.endsWith('=') ? 1 : 0));
-        return (base64String.length * (3 / 4)) - padding;
-    },
-
-    // 2. The Gatekeeper: Add new slices with capacity checking
-    add: function(dataUri) {
-        let library = this.getAll();
-        const newSize = this.calculateByteSize(dataUri);
-        const currentTotal = this.getLibrarySize();
-
-        if ((currentTotal + newSize) > this.MAX_BYTES) {
-            this.triggerVaultPrompt(dataUri);
-            return false;
-        }
-
-        library.push({
-            id: Date.now(),
-            data: dataUri,
-            size: newSize,
-            timestamp: new Date().toISOString()
-        });
-
-        localStorage.setItem(this.storageKey, JSON.stringify(library));
-        this.refreshUI();
-        return true;
-    },
-
-    // 3. Library Management: Retrieval and total weight calculation
-    getAll: function() {
-        const data = localStorage.getItem(this.storageKey);
-        return data ? JSON.parse(data) : [];
-    },
-
-    getLibrarySize: function() {
-        return this.getAll().reduce((acc, item) => acc + item.size, 0);
-    },
-
-    // 4. The Vault Handover: Automated prompt when 5MB limit is breached
-    triggerVaultPrompt: function(pendingItem) {
-        const confirmVault = confirm(
-            "MISSION ALERT: Active Library (5MB) is full.\n\n" +
-            "Would you like to move oldest assets to the INTERNAL VAULT (FileSystem) " +
-            "to make room for this new emoji?"
-        );
-
-        if (confirmVault) {
-            this.offloadToVault(pendingItem);
-        }
-    },
-
-    // 5. FileSystem Bridge: Moves data from LocalStorage to Device Storage
-    offloadToVault: async function(item) {
-        // Logic: Download as file or use File System Access API
-        const blob = await (await fetch(item)).blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `emoji_vault_${Date.now()}.png`;
-        a.click();
+<script>
+class SlotMachine {
+    constructor() {
+        this.canvas = document.getElementById('slotCanvas');
+        this.ctx = this.canvas.getContext('2d');
         
-        console.log("Integrity Check: Asset successfully offloaded to Device Vault.");
-        // After offloading, we would typically purge the oldest local item
-    },
+        this.config = {
+            reels: 5,
+            rows: 3,
+            symbolWidth: 100,
+            symbolHeight: 100,
+            baseSpinSpeed: 25,     // How fast the symbols slide down
+            spinDuration: 1500,    // Base time the reels spin before starting to lock
+            staggerDelay: 300      // Delay between each reel stopping (Left to Right)
+        };
 
-    // 6. UI Synchronization: Populate the 100-slot bar from Phase 1
-    refreshUI: function() {
-        const container = document.getElementById('recent-icons-stream');
-        const library = this.getAll();
-        container.innerHTML = ''; // Clear for rebuild
+        this.coins = 1000;
+        this.currentBetPerLine = 1;
+        this.activeLinesCount = 20;
+        this.isSpinning = false;
 
-        library.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'lib-item';
-            div.innerHTML = `<img src="${item.data}" style="width:100%; height:100%; object-fit:contain;">`;
-            
-            div.onclick = () => {
-                // Bridge to Phase 2: Set the Workbench image and apply Airline/Legs
-                const workbenchImg = document.getElementById('active-workbench-img');
-                workbenchImg.src = item.data;
-                workbenchImg.parentElement.classList.add('airline-container', 'running-character');
+        // Base template asset list (Ready for your real names/links later)
+        this.symbols = [
+            { id: 'test_symbol', name: '💎', value: 5 }
+        ];
+
+        // Core array structure managing the physical movement states of all 5 vertical strips
+        this.reelsData = [];
+        this.paylines = [];
+        
+        this.init();
+    }
+
+    init() {
+        this.generatePaylines();
+        
+        // Construct the 5 independent vertical reel strips
+        for (let r = 0; r < this.config.reels; r++) {
+            this.reelsData[r] = {
+                symbols: [],       // Array of symbols currently loaded on this strip
+                offsetY: 0,        // Current vertical pixel scrolling position
+                state: 'stopped',  // Tracking mechanical state: stopped, spinning, stopping, bouncing
+                targetStop: 0,     // Pixel destination coordinate for alignment locking
+                speed: 0           // Current real-time velocity
             };
             
-            container.appendChild(div);
-        });
-    }
-};
-
-
-const HomeApplier = {
-    generateManifest: function(dataUri, name = "Emoji Asset") {
-        const manifest = {
-            "name": name,
-            "short_name": name,
-            "start_url": ".",
-            "display": "standalone",
-            "background_color": "#050505",
-            "description": "Custom Live Emoji Asset",
-            "icons": [
-                {
-                    "src": dataUri,
-                    "sizes": "192x192 512x512",
-                    "type": "image/png",
-                    "purpose": "any maskable"
-                }
-            ]
-        };
-        
-        const stringManifest = JSON.stringify(manifest);
-        const blob = new Blob([stringManifest], {type: 'application/json'});
-        return URL.createObjectURL(blob);
-    },
-
-    // 2. The Shortcut Generator: Uses the Navigator Share API
-    // This triggers the device's native "Add to Home Screen" prompt
-    applyToHome: async function(dataUri) {
-        const blob = await (await fetch(dataUri)).blob();
-        const file = new File([blob], "emoji_asset.png", { type: "image/png" });
-
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            try {
-                await navigator.share({
-                    files: [file],
-                    title: 'New Emoji Asset',
-                    text: 'Save this to your home screen or use as an icon shortcut.'
-                });
-                console.log("Mission Update: Asset shared to System successfully.");
-            } catch (err) {
-                this.fallbackDownload(dataUri);
+            // Populate each reel strip with enough starting symbols to scroll through cleanly
+            for (let i = 0; i < 10; i++) {
+                this.reelsData[r].symbols.push(this.symbols[0]);
             }
-        } else {
-            this.fallbackDownload(dataUri);
         }
-    },
-
-    // 3. Mechanical Fallback: Manual Save for older Android versions
-    fallbackDownload: function(dataUri) {
-        const link = document.createElement('a');
-        link.download = `emoji_shortcut_${Date.now()}.png`;
-        link.href = dataUri;
-        link.click();
-        alert("AUTOMATION ALERT: Direct Shortcut not supported on this browser. Use 'Add to Home Screen' manually from the saved image.");
-    },
-
-    // 4. THE COMPOSITOR: The "Final Stamp"
-    // This combines the Emoji + Airline Frame + Legs into one flat PNG for the icon
-    finalizeAsset: function() {
-        const workbench = document.getElementById('workbench-viewport');
-        const finalCanvas = document.createElement('canvas');
-        finalCanvas.width = 512;
-        finalCanvas.height = 512;
-        const ctx = finalCanvas.getContext('2d');
-
-        // Logic: We must render the CSS elements (Legs/Frame) onto the Canvas
-        // Note: Real-world implementation uses html2canvas or manual path drawing
-        // to ensure the "Airline" look is baked into the final icon.
         
-        // THE 12:05 AM COMPOSITOR (Line 270 Replacement)
-    finalizeAsset: function() {
-        const finalCanvas = document.createElement('canvas');
-        finalCanvas.width = 512; finalCanvas.height = 512;
-        const ctx = finalCanvas.getContext('2d');
-        const activeEmoji = document.getElementById('active-workbench-img');
-
-        ctx.fillStyle = "#050505";
-        ctx.fillRect(0, 0, 512, 512);
+        this.updateUI();
         
-        ctx.fillStyle = "#00f2ff"; 
-        ctx.globalAlpha = 0.6;
-        ctx.fillRect(180, 400, 40, 60); // Left Leg
-        ctx.fillRect(292, 400, 40, 60); // Right Leg
-
-        ctx.globalAlpha = 1.0;
-        if(activeEmoji && activeEmoji.src) ctx.drawImage(activeEmoji, 106, 106, 300, 300);
-
-        ctx.strokeStyle = "#00f2ff";
-        ctx.lineWidth = 8;
-        ctx.strokeRect(90, 90, 332, 332);
-
-        this.applyToHome(finalCanvas.toDataURL('image/png'));
+        // Start the master high-performance canvas rendering and physics tick loop
+        this.gameTick();
     }
-}; // This closes the HomeApplier object correctly.
 
-/* THE FINAL LOCK-IN */
-document.getElementById('btn-apply-home').onclick = () => HomeApplier.finalizeAsset();
- ========================================= */
+    generatePaylines() {
+        // Horizontal lines
+        for (let row = 0; row < this.config.rows; row++) {
+            let line = [];
+            for (let reel = 0; reel < this.config.reels; reel++) {
+                line.push({ reel: reel, row: row });
+            }
+            this.paylines.push(line);
+        }
+        
+        // Diagonal lines
+        let diag1 = [], diag2 = [];
+        for (let reel = 0; reel < this.config.reels; reel++) {
+            diag1.push({ reel: reel, row: Math.min(reel, this.config.rows - 1) });
+            diag2.push({ reel: reel, row: Math.max(0, this.config.rows - 1 - reel) });
+        }
+        this.paylines.push(diag1, diag2);
 
+        // Fill remaining spaces up to 20 system paylines
+        while(this.paylines.length < 20) {
+            let pseudoLine = [];
+            for (let reel = 0; reel < this.config.reels; reel++) {
+                pseudoLine.push({ reel: reel, row: Math.floor(Math.random() * this.config.rows) });
+            }
+            this.paylines.push(pseudoLine);
+        }
+    }
 
-        /* ========================================= */
-        /* PASTE THE "EXTRA" COMPOSITOR HANDSHAKE    */
-        /* (The 12:05 AM Logic) HERE                 */
-        /* ========================================= */
+    spin() {
+        let totalCost = this.currentBetPerLine * this.activeLinesCount;
+        if (this.isSpinning || this.coins < totalCost) return;
 
+        this.isSpinning = true;
+        this.coins -= totalCost;
+        this.updateUI();
+        document.getElementById('spinBtn').disabled = true;
 
-        // FINAL BOOT SEQUENCE (The "Glue")
-        // This ensures the buttons actually trigger the logic
-        window.addEventListener('DOMContentLoaded', () => {
-            
-            const importBtn = document.getElementById('btn-import-new');
-            const picker = document.getElementById('global-picker');
-            const exportBtn = document.getElementById('btn-apply-home');
+        let startTime = Date.now();
 
-            if(importBtn && picker) {
-                importBtn.onclick = () => picker.click();
+        // Put all 5 reels into motion simultaneously
+        for (let r = 0; r < this.config.reels; r++) {
+            let reel = this.reelsData[r];
+            reel.state = 'spinning';
+            reel.speed = this.config.baseSpinSpeed;
+        }
+
+        // Set up the staggered stop timing sequence loop
+        for (let r = 0; r < this.config.reels; r++) {
+            setTimeout(() => {
+                let reel = this.reelsData[r];
+                reel.state = 'stopping';
+                // Calculate pixel alignment lock boundary based on symbol heights
+                reel.targetStop = Math.ceil(reel.offsetY / this.config.symbolHeight) * this.config.symbolHeight;
+            }, this.config.spinDuration + (r * this.config.staggerDelay));
+        }
+    }
+
+    // High-performance continuous animation loop (Refreshes dynamically with the screen)
+    gameTick() {
+        this.updatePhysics();
+        this.draw();
+        requestAnimationFrame(() => this.gameTick());
+    }
+
+    updatePhysics() {
+        let allReelsStopped = true;
+
+        for (let r = 0; r < this.config.reels; r++) {
+            let reel = this.reelsData[r];
+
+            if (reel.state !== 'stopped') {
+                allReelsStopped = false;
             }
 
-            if(exportBtn) {
-                exportBtn.onclick = () => {
-                    // This calls the Phase 5 / Extra logic
-                    if(typeof HomeApplier !== 'undefined') {
-                        HomeApplier.finalizeAsset();
-                    } else if (typeof Applier !== 'undefined') {
-                        Applier.export();
+            if (reel.state === 'spinning' || reel.state === 'stopping') {
+                // Apply downward displacement velocity vector
+                reel.offsetY += reel.speed;
+
+                // Infinite loop buffer check: reset layout when a symbol slides completely off screen
+                if (reel.offsetY >= this.config.symbolHeight) {
+                    reel.offsetY -= this.config.symbolHeight;
+                    // Pop a symbol off the bottom and insert a fresh one at the top of the strip stack
+                    reel.symbols.pop();
+                    let randomIdx = Math.floor(Math.random() * this.symbols.length);
+                    reel.symbols.unshift(this.symbols[randomIdx]);
+
+                    // Adjust targeting coordinates cleanly if the reel is currently entering the stopping phase
+                    if (reel.state === 'stopping') {
+                        reel.targetStop -= this.config.symbolHeight;
                     }
-                };
-            }
+                }
 
-            // Load the Library visuals from the Clerk
-            if(typeof LibraryManager !== 'undefined') {
-                LibraryManager.refreshUI();
-            } else if (typeof Clerk !== 'undefined') {
-                Clerk.sync();
-            }
-            
-            console.log("Mission Integrity: Boot Sequence Complete.");
-        });
-        document.getElementById('btn-import-new').onclick = () => document.getElementById('global-picker').click();
-document.getElementById('btn-apply-home').onclick = () => HomeApplier.finalizeAsset();
-    </script>
-                <script>
-// This block connects the Bottom Roll to the Big Canvas
-document.querySelector('.scroll-container').addEventListener('click', function(e) {
-    if (e.target.tagName === 'IMG') {
-        const bigCanvas = document.getElementById('active-canvas');
-        const ctx = bigCanvas.getContext('2d');
-        
-        // This clears the canvas and draws the touched image onto it
-        const tempImg = new Image();
-        tempImg.src = e.target.src;
-        tempImg.onload = function() {
-            ctx.clearRect(0, 0, bigCanvas.width, bigCanvas.height);
-            ctx.drawImage(tempImg, 0, 0, bigCanvas.width, bigCanvas.height);
-        };
-    }
-});
-                </script>
-                <script>
-let activeShape = 'square'; // Default shape
+                // If the stopping reel hits its exact target alignment frame, initiate the spring bounce
+                if (reel.state === 'stopping' && reel.offsetY >= reel.targetStop) {
+                    reel.offsetY = 0; // Lock structural alignment directly back to baseline grid array
+                    reel.state = 'bouncing';
+                    reel.speed = -6;  // Invert velocity upward to simulate mechanical bounce physics
+                }
+            } 
+            else if (reel.state === 'bouncing') {
+                // Execute the upward spring rebound recoil path
+                reel.offsetY += reel.speed;
+                reel.speed += 1.5; // Simulate gravity resistance pulling it back down to natural rest
 
-// This block listens to your Menu Box next to the emojis
-document.querySelector('.menu-box').addEventListener('click', function(e) {
-    const action = e.target.innerText.toLowerCase();
-    
-    if (action === 'edit') {
-        // This toggles the shape. For now, we'll cycle between Square and Circle.
-        activeShape = (activeShape === 'square') ? 'circle' : 'square';
-        alert('Shape changed to: ' + activeShape);
-        // Logic to visually redraw the shape on the canvas will go here next
-    }
-    
-    if (action === 'delete') {
-        const confirmDelete = confirm("Are you sure? This clears the canvas.");
-        if (confirmDelete) {
-            const poolDelete = confirm("Do you also want to delete the source image from the pool?");
-            if (poolDelete) {
-                // Logic to remove from the 100-image pool will be inserted here
-                alert("Image removed from pool.");
+                if (reel.offsetY >= 0) {
+                    reel.offsetY = 0;
+                    reel.state = 'stopped';
+                    reel.speed = 0;
+                }
             }
-            const canvas = document.getElementById('active-canvas');
-            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Clean cleanup trigger check once the entire sequence reaches a synchronized stop state
+        if (this.isSpinning && allReelsStopped) {
+            this.isSpinning = false;
+            this.checkWins();
+            document.getElementById('spinBtn').disabled = false;
+            this.updateUI();
         }
     }
-if (action === 'save') {
-        const bigCanvas = document.getElementById('active-canvas');
-        
-        // Convert the canvas content to a PNG image file
-        bigCanvas.toBlob(function(blob) {
-            const fileName = prompt("Name your icon:", "new_icon");
-            if (fileName) {
-                const link = document.createElement('a');
-                link.download = fileName + '.png';
-                link.href = URL.createObjectURL(blob);
+
+    draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw each reel row matrix tracking real-time pixel offset positions
+        for (let r = 0; r < this.config.reels; r++) {
+            let reel = this.reelsData[r];
+            
+            // Render an extra symbol padding element above and below viewport borders to prevent edge clipping gaps
+            for (let i = -1; i < this.config.rows + 1; i++) {
+                let symbol = reel.symbols[i + 1] || this.symbols[0];
+                let x = r * this.config.symbolWidth;
+                // Base Y math grid coordinate modified by the live scrolling physics tracking value
+                let y = i * this.config.symbolHeight + reel.offsetY;
+
+                this.ctx.save();
                 
-                // This forces the "Save" to your phone storage
-                link.click();
+                // --- PIECE #1 MOTION BLUR EFFECT ---
+                // If the reel is spinning fast, apply a visual vertical smear to mimic real machine glass optics
+                if (reel.state === 'spinning' && Math.abs(reel.speed) > 10) {
+                    this.ctx.globalAlpha = 0.4;
+                    this.ctx.font = '34px sans-serif';
+                    this.ctx.fillText(symbol.name, x + this.config.symbolWidth / 2, y + this.config.symbolHeight / 2 - 10);
+                    this.ctx.fillText(symbol.name, x + this.config.symbolWidth / 2, y + this.config.symbolHeight / 2 + 10);
+                    this.ctx.globalAlpha = 1.0;
+                }
+
+                // Render primary base character frame cleanly centered inside cell geometry coordinates
+                this.ctx.font = '34px sans-serif';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillStyle = '#fff';
+                this.ctx.fillText(symbol.name, x + this.config.symbolWidth / 2, y + this.config.symbolHeight / 2);
                 
-                // Cleanup the temporary link
-                URL.revokeObjectURL(link.href);
+                // Draw rigid frame dividing cells outer boundaries
+                this.ctx.strokeStyle = '#444';
+                this.ctx.strokeRect(x, y, this.config.symbolWidth, this.config.symbolHeight);
+                
+                this.ctx.restore();
             }
-        }, 'image/png');
-}});
-                </script>
+        }
+    }
+
+    checkWins() {
+        let totalWin = 0;
+        
+        for (let i = 0; i < this.activeLinesCount; i++) {
+            let line = this.paylines[i];
+            // Read index mappings off the visible 3 rows currently sitting locked inside the viewport view
+            let firstSymbol = this.reelsData[line[0].reel].symbols[line[0].row + 1];
+            let matchCount = 1;
+
+            for (let c = 1; c < line.length; c++) {
+                let currentSymbol = this.reelsData[line[c].reel].symbols[line[c].row + 1];
+                if (currentSymbol.id === firstSymbol.id) {
+                    matchCount++;
+                } else {
+                    break;
+                }
+            }
+
+            if (matchCount >= 3) {
+                totalWin += firstSymbol.value * matchCount * this.currentBetPerLine;
+            }
+        }
+
+        if (totalWin > 0) {
+            this.coins += totalWin;
+        }
+    }
+
+    updateUI() {
+        document.getElementById('balanceDisplay').innerText = this.coins;
+        document.getElementById('betDisplay').innerText = this.currentBetPerLine * this.activeLinesCount;
+    }
+
+    addCredits() {
+        this.coins += 500;
+        this.updateUI();
+    }
+}
+
+const slotMachine = new SlotMachine();
+</script>
+
 </body>
 </html>
